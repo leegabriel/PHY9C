@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Synaptics Sensor Data Demo</title>
+    <title>EM Simulator</title>
 	<style>
 	img {
 		position: absolute;
@@ -10,9 +10,21 @@
 	body {
 		margin: 0 auto;
 	}
+	
+	.wrapper {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+	
+	.wrapper canvas {
+		position: absolute;
+		top: 0;
+		left: 0;
+	}
 	</style>
   </head>
-  <body>
+  <body onload="start()">
     <script src="jquery-1.11.3.js"></script>
     <script>
       baseline = [];
@@ -31,6 +43,16 @@
 	  var y2 = 25;
 	  var dx2 = 0;
 	  var dy2 = 0;
+	  
+	  var harrows = 16;
+	  var varrows = 9;
+	  var arr = new Float32Array(12 * harrows * varrows);
+	  //var arr = new Array(2 * 2 * harrows * varrows); // [32][18][2];
+	  //var carr = new Float32Array(2 * 4 * harrows * varrows);
+
+	  var gl; // A global variable for the WebGL context
+	  var aloc;
+	  var bloc;
 
       function updateFrameRate(ts, seq) {
         if (lastSequence < 0) {
@@ -53,6 +75,10 @@
       }
 
       function updateCanvas(img, rows, cols) {
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.uniform1f(aloc, rows);
+		gl.uniform1f(bloc, cols);
+
         if (rezero) {
           rezero = false;
           for (i = 0; i < rows; i++) {
@@ -96,7 +122,14 @@
 		var ddy = 0;
 		var ddx2 = 0;
 		var ddy2 = 0;
-		// var mult = 0;
+		var linescale = 0.005 / rows;
+		for (i = 0; i < varrows; i++)
+		  for (j = 0; j < harrows; j++) {
+			arr[i * harrows * 12 + j * 12 + 6] = j * cols / harrows;
+			arr[i * harrows * 12 + j * 12 + 7] = i * rows / varrows;
+		    arr[i * harrows * 12 + j * 12] = arr[i * harrows * 12 + j * 12 + 6];
+		    arr[i * harrows * 12 + j * 12 + 1] = arr[i * harrows * 12 + j * 12 + 7];
+		  }
         for (i = 0; i < rows; i++) {
           for (j = 0; j < cols; j++) {
             v = img[i][j];
@@ -109,20 +142,54 @@
 			// charges = color / 255.0;
 			if ((i > 3 && i < rows - 3 && j > 3 && j < cols - 3)) {
 				if (x != i || y != j) {
-					r2 = (x - i) * (x - i) + (y - j) * (y - j) + 10;
-					ddx += color * color / r2 * (x - i) / Math.sqrt(r2);
-					ddy += color * color / r2 * (y - j) / Math.sqrt(r2);
+					r2 = (y - i) * (y - i) + (x - j) * (x - j) + 10;
+					ddx += color * color / r2 * (x - j);// / Math.sqrt(r2);
+					ddy += color * color / r2 * (y - i);// / Math.sqrt(r2);
 				}
 				if (x2 != i || y2 != j) {
-					r2 = (x2 - i) * (x2 - i) + (y2 - j) * (y2 - j) + 10;
-					ddx2 += color * color / r2 * (x2 - i) / Math.sqrt(r2);
-					ddy2 += color * color / r2 * (y2 - j) / Math.sqrt(r2);
+					r2 = (y2 - i) * (y2 - i) + (x2 - j) * (x2 - j) + 10;
+					ddx2 += color * color / r2 * (x2 - j);// / Math.sqrt(r2);
+					ddy2 += color * color / r2 * (y2 - i);// / Math.sqrt(r2);
 				}
+				for (ii = 0; ii < varrows; ii++)
+					for (jj = 0; jj < harrows; jj++) {
+							ti = ii * rows / varrows;
+							tj = jj * cols / harrows;
+						if (ti != i || tj != j) {
+							r2 = (ti - i) * (ti - i) + (tj - j) * (tj - j) + 10;
+							arr[ii * harrows * 12 + jj * 12 + 1] += linescale * color * color / r2 * (ti - i);// / Math.sqrt(r2);
+							arr[ii * harrows * 12 + jj * 12] += linescale * color * color / r2 * (tj - j);// / Math.sqrt(r2);
+						}
+					}			
 			}
           }
-		  // console.log(pixels);
         }
-		var scale = -0.005;
+		r2 = (x - x2) * (x - x2) + (y - y2) * (y - y2);
+		ddx += 255*255/r2 * (x - x2);
+		ddy += 255*255/r2 * (y - y2);
+		ddx2 += 255*255/r2 * (x - x2);
+		ddy2 += 255*255/r2 * (y - y2);
+		for (ii = 0; ii < varrows; ii++)
+			for (jj = 0; jj < harrows; jj++) {
+					ti = ii * rows / varrows;
+					tj = jj * cols / harrows;
+				if (ti != i || tj != j) {
+					r2 = (tj - x) * (tj - x) + (ti - y) * (ti - y) + 10;
+					arr[ii * harrows * 12 + jj * 12 + 1] += linescale * 255 * 255 * 4 / r2 * (y - ti);// / Math.sqrt(r2);
+					arr[ii * harrows * 12 + jj * 12] += linescale * 255 * 255 * 4 / r2 * (x - tj);// / Math.sqrt(r2);
+				}
+			}
+		for (ii = 0; ii < varrows; ii++)
+			for (jj = 0; jj < harrows; jj++) {
+					ti = ii * rows / varrows;
+					tj = jj * cols / harrows;
+				if (ti != i || tj != j) {
+					r2 = (tj - x2) * (tj - x2) + (ti - y2) * (ti - y2) + 10;
+					arr[ii * harrows * 12 + jj * 12 + 1] += linescale * 255 * 255 * 4 / r2 * (ti - y2);// / Math.sqrt(r2);
+					arr[ii * harrows * 12 + jj * 12] += linescale * 255 * 255 * 4 / r2 * (tj - x2);// / Math.sqrt(r2);
+				}
+			}
+		var scale = -0.0005;
 		var dt = 0.064;
 		ddx = scale * ddx;
 		ddy = scale * ddy;
@@ -138,34 +205,44 @@
 			dx = -dx * dampen;
 			x = 0;
 		}
-		else if (x > rows) {
+		else if (x > cols) {
 			dx = -dx * dampen;
-			x = rows;
+			x = cols;
 		}
 		if (y < 0) {
 			dy = -dy * dampen;
 			y = 0;
 		}
-		else if (y > cols) {
+		else if (y > rows) {
 			dy = -dy * dampen;
-			y = cols;
+			y = rows;
 		}
 		dampen2 = 0.75;
 		if (x2 < 0) {
 			dx2 = -dx2 * dampen2;
 			x2 = 0;
 		}
-		else if (x2 > rows) {
+		else if (x2 > cols) {
 			dx2 = -dx2 * dampen2;
-			x2 = rows;
+			x2 = cols;
 		}
 		if (y2 < 0) {
 			dy2 = -dy2 * dampen2;
 			y2 = 0;
 		}
-		else if (y2 > cols) {
+		else if (y2 > rows) {
 			dy2 = -dy2 * dampen2;
-			y2 = cols;
+			y2 = rows;
+		}
+
+		dampen3 = 0.7;
+		if ((x2 - x < 2 && x - x2 < 2) && (y2 - y < 2 && y - y2 < 2)) {
+			dx2 = -dx2 * dampen3;
+			dx = -dx * dampen3;
+			x += x - x2;
+			dy2 = -dy2 * dampen3;
+			dy = -dy * dampen3;
+			y2 += y2 - y;
 		}
 		x += dx * dt;
 		y += dy * dt;
@@ -176,18 +253,106 @@
 		ctx.putImageData(pixels, 0, 0);
 		// console.log(y);
 		// console.log(y);
-		$("#donald").css({"margin-left": x * canvas.width / rows - 75, "margin-top": y * canvas.height / cols - 75});
-		$("#bernie").css({"margin-left": x2 * canvas.width / rows - 75, "margin-top": y2 * canvas.height / cols - 75});
+		$("#donald").css({"margin-left": x * canvas.width / cols - 50, "margin-top": y * canvas.height / rows - 50});
+		$("#bernie").css({"margin-left": x2 * canvas.width / cols - 50, "margin-top": y2 * canvas.height / rows - 50});
 
         dispCanvas = document.getElementById("canvas");
-        dispCanvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-        dispCanvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        dispCanvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight - 100;
+        dispCanvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth - 100;
         dispCtx = dispCanvas.getContext("2d");
         dispCtx.drawImage(ctx.canvas, 0, 0, cols, rows, 0, 0, dispCanvas.width, dispCanvas.height);
-		
-		
-		
+
+		gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+		gl.drawArrays(gl.LINES, 0, harrows * varrows * 2);
       }
+
+
+	var program;
+	var vbo = 0;
+	function start() {
+	  var canvas = document.getElementById("glcanvas");
+	  canvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight - 100;
+      canvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth - 100;
+	  // Initialize the GL context
+	  gl = initWebGL(canvas);
+	  
+	  // Only continue if WebGL is available and working
+	  
+	  if (gl) {
+		// Set clear color to black, fully opaque
+		gl.clearColor(0.0, 0.0, 0.0, 0.0);
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+		// gl.clear(gl.COLOR_BUFFER_BIT);
+		
+		
+		vshader = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vshader, "\
+			attribute vec2 a_position;\n\
+			attribute vec4 a_color;\n\
+			\
+			varying vec4 o_color;\n\
+			\
+			uniform float a;\
+			uniform float b;\
+			\
+			void main() {\n\
+			  o_color = a_color;\n\
+			  gl_Position = vec4(a_position.x / b * 2.0 - 1.0, -a_position.y / a * 2.0 + 1.0, 0.0, 1.0);\n\
+			}\n");
+		gl.compileShader(vshader);
+		fshader = gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fshader, "\
+			precision mediump float;\n\
+			varying vec4 o_color;\n\
+			void main() {\n\
+			  gl_FragColor = o_color;\n\
+			}\n");
+		gl.compileShader(fshader);
+		program = gl.createProgram();
+		gl.attachShader(program, vshader);
+		gl.attachShader(program, fshader);
+		gl.linkProgram(program);
+		gl.useProgram(program);
+		vbo = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+		gl.enableVertexAttribArray(gl.getAttribLocation(program, "a_position"));
+		gl.enableVertexAttribArray(gl.getAttribLocation(program, "a_color"));
+		gl.vertexAttribPointer(gl.getAttribLocation(program, "a_position"), 2, gl.FLOAT, gl.FALSE, 24, 0);
+		gl.vertexAttribPointer(gl.getAttribLocation(program, "a_color"), 4, gl.FLOAT, gl.FALSE, 24, 8);
+		aloc = gl.getUniformLocation(program, "a");
+		bloc = gl.getUniformLocation(program, "b");
+	  }
+	  for (i = 0; i < varrows; i++)
+		for (j = 0; j < harrows; j++) {
+			arr[i * harrows * 12 + j * 12 + 2] = 1.0;
+			arr[i * harrows * 12 + j * 12 + 3] = 1.0;
+			arr[i * harrows * 12 + j * 12 + 4] = 0.0;
+			arr[i * harrows * 12 + j * 12 + 5] = 0.0;
+			arr[i * harrows * 12 + j * 12 + 8] = 1.0;
+			arr[i * harrows * 12 + j * 12 + 9] = 1.0;
+			arr[i * harrows * 12 + j * 12 + 10] = 0.0;
+			arr[i * harrows * 12 + j * 12 + 11] = 1.0;
+		}
+	}
+	
+	function initWebGL(canvas) {
+	  gl = null;
+	  
+	  try {
+		// Try to grab the standard context. If it fails, fallback to experimental.
+		gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+	  }
+	  catch(e) {}
+	  
+	  // If we don't have a GL context, give up now
+	  if (!gl) {
+		alert("Unable to initialize WebGL. Your browser may not support it.");
+		gl = null;
+	  }
+	  
+	  return gl;
+	}
 
       function requestUpdate() {
         $.getJSON("sensorData", function(json) {
@@ -223,13 +388,16 @@
           rezero = true;
         });
       });
+	  
     </script>
     <!--<p id="framesPerSec">&nbsp;</p>-->
-	
     <p id="rawData"></p>
-	<img id="donald" width="150" height="150" src="https://lh3.googleusercontent.com/iPrElEsG9NZU8dT_o3RNvzZW7dGeuefYzWtUsE7nXZqdvvUVrf9CfZEz_QrMuTTeg7rh=h900">
-	<img id="bernie" width="150" height="150" src="http://graphics.wsj.com/elections/2016/fec-donor-data/img/bernie_sanders.png">
-    <canvas id="canvas"></canvas>
+	<img id="donald" width="100" height="100" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Electric_charge_symbol_negative.svg/120px-Electric_charge_symbol_negative.svg.png">
+	<img id="bernie" width="100" <height="100" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Electric_charge_symbol_positive.svg/100px-Electric_charge_symbol_positive.svg.png">
+    <div class="wrapper">
+		<canvas id="canvas"></canvas>
+		<canvas id="glcanvas"></canvas>
+	</div>
 	<p>
       <button id="button1">Start</button>
       <button id="rezero">Rezero</button>
