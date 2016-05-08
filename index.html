@@ -43,10 +43,18 @@
 	  var y2 = 25;
 	  var dx2 = 0;
 	  var dy2 = 0;
+	  var counter = 0;
+	  var counter2 = 0;
+	  var line_width = 0.8;
+	  
+	  var coor_array = new Array(10);
+	  var coor_array2 = new Array(10);
 	  
 	  var harrows = 16;
 	  var varrows = 9;
 	  var arr = new Float32Array(12 * harrows * varrows);
+	  var trail = new Float32Array(19*6);
+	  var trail2 = new Float32Array(19*6);
 	  //var arr = new Array(2 * 2 * harrows * varrows); // [32][18][2];
 	  //var carr = new Float32Array(2 * 4 * harrows * varrows);
 
@@ -248,7 +256,35 @@
 		y += dy * dt;
 		x2 += dx2 * dt;
 		y2 += dy2 * dt;
+		
+		var coord1 = {x_coor: x, y_coor: y, veloc_x: dx , veloc_y: dy};
+		
+		var coord2= {x_coor: x2, y_coor: y2, veloc_x: dx2, veloc_y: dy2};
+		
+		coor_array[counter] = coord1;
+		coor_array2[counter] = coord2;
+		counter++;
  
+		if(counter == 10) counter = 0;
+		
+		for(k = 0;k < 9; k++){
+			t = 1/Math.sqrt(coor_array[(counter + 9 - k)%10].veloc_y * coor_array[(counter + 9 - k)%10].veloc_y + coor_array[(counter + 9 - k)%10].veloc_x * coor_array[(counter + 9 - k)%10].veloc_x);
+			trail[0+12*k] = coor_array[(counter + 9 - k)%10].x_coor + coor_array[(counter + 9 - k)%10].veloc_y * line_width * t * (1 - k/9);
+			trail[1+12*k] = coor_array[(counter + 9 - k)%10].y_coor - coor_array[(counter + 9 - k)%10].veloc_x * line_width * t * (1 - k/9);
+			trail[6+12*k] = coor_array[(counter + 9 - k)%10].x_coor - coor_array[(counter + 9 - k)%10].veloc_y * line_width * t * (1 - k/9);
+			trail[7+12*k] = coor_array[(counter + 9 - k)%10].y_coor + coor_array[(counter + 9 - k)%10].veloc_x * line_width * t * (1 - k/9);
+		}
+		trail[6*18] = coor_array[(counter + 1)%10].x_coor;
+		trail[1+6*18] = coor_array[(counter + 1)%10].y_coor;
+		for(k = 0;k < 9; k++){
+			t = 1/Math.sqrt(coor_array2[(counter + 10 + k)%10].veloc_y * coor_array2[(counter + 10 + k)%10].veloc_y + coor_array2[(counter + 10 + k)%10].veloc_x * coor_array2[(counter + 10 + k)%10].veloc_x);
+			trail2[0+12*k] = coor_array2[(counter + 10 + k)%10].x_coor + coor_array2[(counter + 10 + k)%10].veloc_y * line_width * t * (1 - k/9);
+			trail2[1+12*k] = coor_array2[(counter + 10 + k)%10].y_coor - coor_array2[(counter + 10 + k)%10].veloc_x * line_width * t * (1 - k/9);
+			trail2[6+12*k] = coor_array2[(counter + 10 + k)%10].x_coor - coor_array2[(counter + 10 + k)%10].veloc_y * line_width * t * (1 - k/9);
+			trail2[7+12*k] = coor_array2[(counter + 10 + k)%10].y_coor + coor_array2[(counter + 10 + k)%10].veloc_x * line_width * t * (1 - k/9);
+		}
+		trail2[6*18] = coor_array2[(counter + 1)%10].x_coor;
+		trail2[1+6*18] = coor_array2[(counter + 1)%10].y_coor;
 		
 		ctx.putImageData(pixels, 0, 0);
 		// console.log(y);
@@ -264,12 +300,18 @@
 
 		gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
 		gl.drawArrays(gl.LINES, 0, harrows * varrows * 2);
+		gl.bufferData(gl.ARRAY_BUFFER, trail, gl.STATIC_DRAW);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 19);
+		gl.bufferData(gl.ARRAY_BUFFER, trail2, gl.STATIC_DRAW);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 19);
       }
 
 
 	var program;
 	var vbo = 0;
 	function start() {
+	
+
 	  var canvas = document.getElementById("glcanvas");
 	  canvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight - 100;
       canvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth - 100;
@@ -334,7 +376,42 @@
 			arr[i * harrows * 12 + j * 12 + 10] = 0.0;
 			arr[i * harrows * 12 + j * 12 + 11] = 1.0;
 		}
+		
+		
+		for(i = 0; i < 10; i++){
+		var c = {x_coor: x, y_coor: y, veloc_x: 0 , veloc_y: 0};
+		coor_array[i] = c;
+	  }
+	  
+	  for(j = 0; j < 10;j++){
+		var c2 = {x_coor: x2, y_coor: y2, veloc_x: 0 , veloc_y: 0};
+		coor_array2[j] = c2;	  	  
+	  }
+	  
+	  for(k = 0; k < 19; k++){
+		
+		trail2[6*k + 2] = 1.0;
+		trail2[6*k + 3] = 0.5;
+		trail2[6*k + 4] = 0.5;
+		trail2[6*k + 5] = 0.75 * (1 - k / 19);
+		
+	  }
+	  
+	  for(m = 0; m < 19; m++){
+		
+		trail[6*m + 2] = 0.5;
+		trail[6*m + 3] = 1.0;
+		trail[6*m + 4] = 1.0;
+		trail[6*m + 5] = 0.75 * (1 - m / 19);
+		
+	  }
+	  
+	  
 	}
+	
+	
+	  
+	  
 	
 	function initWebGL(canvas) {
 	  gl = null;
