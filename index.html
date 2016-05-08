@@ -1,6 +1,16 @@
 <html>
   <head>
     <title>Synaptics Sensor Data Demo</title>
+	<style>
+	img {
+		position: absolute;
+		z-index: 1;
+	}
+	
+	body {
+		margin: 0 auto;
+	}
+	</style>
   </head>
   <body>
     <script src="jquery-1.11.3.js"></script>
@@ -11,10 +21,16 @@
       frameCount = -1;
       lastSequence = -1;
       lastTs = -1;
-	  var x = 0;
-	  var y = 0;
+	  
+	  var x = 30;
+	  var y = 20;
 	  var dx = 0;
 	  var dy = 0;
+	  
+	  var x2 = 35;
+	  var y2 = 25;
+	  var dx2 = 0;
+	  var dy2 = 0;
 
       function updateFrameRate(ts, seq) {
         if (lastSequence < 0) {
@@ -56,8 +72,6 @@
         for (i = 0; i < rows; i++) {
           for (j = 0; j < cols; j++) {
             v = img[i][j];
-			// console.log("i: " + i);
-			// console.log("j: " + j);
             if (v > max) {
               max = v;
             }
@@ -67,62 +81,112 @@
           }
         }
         canvas = document.createElement("canvas");
-        canvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-        canvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        canvas.height = (window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight) - 100;
+        canvas.width = (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) - 100;
         ctx = canvas.getContext('2d');
         pixels = ctx.createImageData(cols, rows);
 		// var charges[rows][cols];
+		
+		canvas_donald = document.createElement("canvas");
+        canvas_donald.height = (window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight) - 100;
+        canvas_donald.width = (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) - 100;
+        ctx_donald = canvas_donald.getContext('2d');
 
 		var ddx = 0;
 		var ddy = 0;
-		var mult = 0;
+		var ddx2 = 0;
+		var ddy2 = 0;
+		// var mult = 0;
         for (i = 0; i < rows; i++) {
           for (j = 0; j < cols; j++) {
             v = img[i][j];
-            color = Math.round((v - min)/(max-min) * 255);
+			vv = ((v - min)/(max-min));
+			color = Math.round( vv * vv * 255);
             pixels.data[(i*cols + j)*4] = color;
             pixels.data[(i*cols + j)*4+1] = color;
             pixels.data[(i*cols + j)*4+2] = color;
             pixels.data[(i*cols + j)*4+3] = 255;
 			// charges = color / 255.0;
-			r2 = (x - i) * (x - i) + (y - j) * (y - j);
-			ddx += color / r2 * (x - i) / Math.sqrt(r2);
-			ddy += color / r2 * (y - j) / Math.sqrt(r2);
+			if ((i > 3 && i < rows - 3 && j > 3 && j < cols - 3)) {
+				if (x != i || y != j) {
+					r2 = (x - i) * (x - i) + (y - j) * (y - j) + 10;
+					ddx += color * color / r2 * (x - i) / Math.sqrt(r2);
+					ddy += color * color / r2 * (y - j) / Math.sqrt(r2);
+				}
+				if (x2 != i || y2 != j) {
+					r2 = (x2 - i) * (x2 - i) + (y2 - j) * (y2 - j) + 10;
+					ddx2 += color * color / r2 * (x2 - i) / Math.sqrt(r2);
+					ddy2 += color * color / r2 * (y2 - j) / Math.sqrt(r2);
+				}
+			}
           }
 		  // console.log(pixels);
         }
-		var scale = 1.0;
-		var dt = .064;
+		var scale = -0.005;
+		var dt = 0.064;
 		ddx = scale * ddx;
 		ddy = scale * ddy;
-		dx += ddx * dt;
-		dy += ddy * dt;
+		ddx2 = -scale * ddx2;
+		ddy2 = -scale * ddy2;
+		var drag = 1;
+		dx = dx * drag + ddx * dt;
+		dy = dy * drag + ddy * dt;
+		dx2 = dx2 * drag + ddx2 * dt;
+		dy2 = dy2 * drag + ddy2 * dt;
+		var dampen = 0.3;
 		if (x < 0) {
-			dx = -dx;
+			dx = -dx * dampen;
 			x = 0;
 		}
 		else if (x > rows) {
-			dx = -dx;
+			dx = -dx * dampen;
 			x = rows;
 		}
 		if (y < 0) {
-			dy = -dy;
+			dy = -dy * dampen;
 			y = 0;
 		}
 		else if (y > cols) {
-			dy = -dy;
+			dy = -dy * dampen;
 			y = cols;
+		}
+		dampen2 = 0.75;
+		if (x2 < 0) {
+			dx2 = -dx2 * dampen2;
+			x2 = 0;
+		}
+		else if (x2 > rows) {
+			dx2 = -dx2 * dampen2;
+			x2 = rows;
+		}
+		if (y2 < 0) {
+			dy2 = -dy2 * dampen2;
+			y2 = 0;
+		}
+		else if (y2 > cols) {
+			dy2 = -dy2 * dampen2;
+			y2 = cols;
 		}
 		x += dx * dt;
 		y += dy * dt;
+		x2 += dx2 * dt;
+		y2 += dy2 * dt;
  
 		
 		ctx.putImageData(pixels, 0, 0);
+		// console.log(y);
+		// console.log(y);
+		$("#donald").css({"margin-left": x * canvas.width / rows - 75, "margin-top": y * canvas.height / cols - 75});
+		$("#bernie").css({"margin-left": x2 * canvas.width / rows - 75, "margin-top": y2 * canvas.height / cols - 75});
+
         dispCanvas = document.getElementById("canvas");
         dispCanvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
         dispCanvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
         dispCtx = dispCanvas.getContext("2d");
         dispCtx.drawImage(ctx.canvas, 0, 0, cols, rows, 0, 0, dispCanvas.width, dispCanvas.height);
+		
+		
+		
       }
 
       function requestUpdate() {
@@ -163,9 +227,10 @@
     <!--<p id="framesPerSec">&nbsp;</p>-->
 	
     <p id="rawData"></p>
-    <canvas id="canvas"></canvas>
 	<img id="donald" width="150" height="150" src="https://lh3.googleusercontent.com/iPrElEsG9NZU8dT_o3RNvzZW7dGeuefYzWtUsE7nXZqdvvUVrf9CfZEz_QrMuTTeg7rh=h900">
-    <p>
+	<img id="bernie" width="150" height="150" src="http://graphics.wsj.com/elections/2016/fec-donor-data/img/bernie_sanders.png">
+    <canvas id="canvas"></canvas>
+	<p>
       <button id="button1">Start</button>
       <button id="rezero">Rezero</button>
     </p>
