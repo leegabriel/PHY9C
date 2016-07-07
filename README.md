@@ -4,7 +4,7 @@ Physics with a Synaptics TouchPad.
 
 1st Place Best Use of Touch Hardware at HackDavis 2016.
 
-<img src="http://imgur.com/OanbfjK">
+<img src="http://i.imgur.com/OanbfjK.gif">
 
 ## Install
 
