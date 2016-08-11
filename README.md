@@ -1,6 +1,6 @@
-# EM Simulator
+# PHY9C
 
-Physics with a Synaptics TouchPad.
+E&M with a Synaptics TouchPad.
 
 1st Place Best Use of Touch Hardware at HackDavis 2016.
 
@@ -8,7 +8,7 @@ Physics with a Synaptics TouchPad.
 
 ## Install
 
-EM Simulator requires 
+PHY9C requires 
 <ul>
   <li>A Synaptics TouchPad + the appropriate <a href="http://www.synaptics.com/resources">TouchPad drivers</a></li>
   <li>Python 2.7 or 3.X</li>
@@ -17,7 +17,7 @@ EM Simulator requires
 </ul>
 
 ```bash
-$ git clone https://github.com/leegabriel/em-simulator.git 
+$ git clone https://github.com/leegabriel/PHY9C.git 
 ```
 
 ## Usage
