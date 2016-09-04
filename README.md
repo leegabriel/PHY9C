@@ -2,7 +2,7 @@
 
 E&M with a Synaptics TouchPad.
 
-1st Place Best Use of Touch Hardware at HackDavis 2016.
+<a href="http://devpost.com/software/em-simulator">1st Place Best Use of Touch Hardware at HackDavis 2016.</a>
 
 <img src="http://i.imgur.com/OanbfjK.gif">
 
